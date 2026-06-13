@@ -33,5 +33,34 @@ router.post('/', (req, res) => {
 
   res.status(201).json(item);
 });
+// GET /lists/:listId/items
+router.get('/', (req, res) => {
+  const { listId } = req.params;
+
+  const list = db.prepare('SELECT id FROM lists WHERE id = ?').get(listId);
+  if (!list) {
+    return res.status(404).json({ error: 'list not found' });
+  }
+
+  const items = db.prepare(
+    'SELECT * FROM items WHERE list_id = ? ORDER BY position ASC'
+  ).all(listId);
+
+  res.json(items);
+});
+// GET /lists/:listId/items/:itemId
+router.get('/:itemId', (req, res) => {
+  const { listId, itemId } = req.params;
+
+  const item = db.prepare(
+    'SELECT * FROM items WHERE id = ? AND list_id = ?'
+  ).get(itemId, listId);
+
+  if (!item) {
+    return res.status(404).json({ error: 'item not found' });
+  }
+
+  res.json(item);
+});
 
 module.exports = router;
