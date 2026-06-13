@@ -120,4 +120,33 @@ router.patch('/:itemId/move', (req, res) => {
 
   res.json(result.item);
 });
+
+// DELETE /lists/:listId/items/:itemId
+router.delete('/:itemId', (req, res) => {
+  const { listId, itemId } = req.params;
+
+  const remove = db.transaction(() => {
+    const item = db.prepare(
+      'SELECT * FROM items WHERE id = ? AND list_id = ?'
+    ).get(itemId, listId);
+    if (!item) return { error: 'not_found' };
+
+    db.prepare('DELETE FROM items WHERE id = ?').run(itemId);
+
+    // shift everything above the deleted position down by 1
+    db.prepare(
+      'UPDATE items SET position = position - 1 WHERE list_id = ? AND position > ?'
+    ).run(listId, item.position);
+
+    return { ok: true };
+  });
+
+  const result = remove();
+  if (result.error === 'not_found') {
+    return res.status(404).json({ error: 'item not found' });
+  }
+
+  res.status(204).send();
+});
+
 module.exports = router;
